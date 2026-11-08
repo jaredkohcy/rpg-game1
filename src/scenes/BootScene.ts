@@ -1,5 +1,4 @@
 import Phaser from "phaser";
-import { MonsterSystem } from "../systems/MonsterSystem";
 
 export class BootScene extends Phaser.Scene {
   constructor() {
@@ -12,12 +11,6 @@ export class BootScene extends Phaser.Scene {
     this.load.image("biome-cave", "assets/biomes/cave.svg");
     this.load.image("biome-ruins", "assets/biomes/ruins.svg");
     this.load.image("biome-highlands", "assets/biomes/highlands.svg");
-
-    MonsterSystem.getAllMonsters()
-      .filter(monster => monster.image)
-      .forEach(monster => {
-        this.load.image(`monster-${monster.id}`, monster.image);
-      });
   }
 
   create() {

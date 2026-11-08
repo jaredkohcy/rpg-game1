@@ -2,6 +2,26 @@ import Phaser from "phaser";
 import { QuestionSystem } from "../systems/QuestionSystem";
 import { SaveSystem } from "../systems/SaveSystem";
 export class BattleScene extends Phaser.Scene {
+    showMonsterImage() {
+        const textureKey = `monster-${this.monster.id}`;
+        const addMonsterImage = () => {
+            if (this.textures.exists(textureKey)) {
+                this.add.image(this.scale.width - 200, 170, textureKey).setDisplaySize(160, 160);
+            }
+        };
+        if (this.textures.exists(textureKey)) {
+            addMonsterImage();
+            return;
+        }
+        this.load.once(`filecomplete-image-${textureKey}`, addMonsterImage);
+        this.load.once(Phaser.Loader.Events.FILE_LOAD_ERROR, (file) => {
+            if (file.key === textureKey) {
+                console.error(`Failed to load monster image: ${this.monster.image}`);
+            }
+        });
+        this.load.image(textureKey, this.monster.image);
+        this.load.start();
+    }
     constructor() {
         super("BattleScene");
         this.monsterHp = 0;
@@ -56,9 +76,8 @@ export class BattleScene extends Phaser.Scene {
                 fontSize: "24px",
                 color: "#66ff66"
             });
-        const monsterTexture = `monster-${this.monster.id}`;
-        if (this.monster.image && this.textures.exists(monsterTexture)) {
-            this.add.image(this.scale.width - 200, 170, monsterTexture).setDisplaySize(160, 160);
+        if (this.monster.image) {
+            this.showMonsterImage();
         }
         //
         // Question
