@@ -1,0 +1,1 @@
+export interface Question {id:number; type:string; subject:string; question:string; image?:string; answers:string[];}
