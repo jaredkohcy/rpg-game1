@@ -14,6 +14,53 @@ export class BattleScene extends Phaser.Scene {
   private playerHp = 100;
 
   private questionImage?: Phaser.GameObjects.Image;
+  private questionImageMask?: Phaser.Display.Masks.GeometryMask;
+  private questionImageMaskSource?: Phaser.GameObjects.Graphics;
+  private questionScrollHint?: Phaser.GameObjects.Text;
+  private questionImageViewport = { x: 40, y: 250, width: 1520, height: 610 };
+  private questionImageHeight = 0;
+  private questionImageScrollOffset = 0;
+
+  private positionQuestionImage() {
+    if (!this.questionImage) {
+      return;
+    }
+
+    const { y, height } = this.questionImageViewport;
+    const imageY = this.questionImageHeight <= height
+      ? y + height / 2
+      : y + this.questionImageHeight / 2 - this.questionImageScrollOffset;
+
+    this.questionImage.setPosition(this.scale.width / 2, imageY);
+  }
+
+  private handleQuestionWheel(
+    pointer: Phaser.Input.Pointer,
+    _currentlyOver: Phaser.GameObjects.GameObject[],
+    _deltaX: number,
+    deltaY: number
+  ) {
+    const { x, y, width, height } = this.questionImageViewport;
+    const maxOffset = Math.max(0, this.questionImageHeight - height);
+
+    if (
+      !this.questionImage?.visible ||
+      maxOffset === 0 ||
+      pointer.x < x ||
+      pointer.x > x + width ||
+      pointer.y < y ||
+      pointer.y > y + height
+    ) {
+      return;
+    }
+
+    this.questionImageScrollOffset = Phaser.Math.Clamp(
+      this.questionImageScrollOffset + deltaY,
+      0,
+      maxOffset
+    );
+    this.positionQuestionImage();
+  }
 
   private showMonsterImage() {
     const textureKey = `monster-${this.monster.id}`;
@@ -61,17 +108,18 @@ export class BattleScene extends Phaser.Scene {
       }
 
       const source = this.textures.get(textureKey).getSourceImage();
-      const maxWidth = this.scale.width - 80;
-      const maxHeight = 320;
       const scale = Math.min(
-        maxWidth / source.width,
-        maxHeight / source.height
+        this.questionImageViewport.width / source.width,
+        1
       );
+      const imageWidth = source.width * scale;
+      this.questionImageHeight = source.height * scale;
+      this.questionImageScrollOffset = 0;
 
       if (!this.questionImage) {
         this.questionImage = this.add.image(
           this.scale.width / 2,
-          420,
+          0,
           textureKey
         );
       } else {
@@ -79,9 +127,13 @@ export class BattleScene extends Phaser.Scene {
       }
 
       this.questionImage
-        .setPosition(this.scale.width / 2, 420)
-        .setDisplaySize(source.width * scale, source.height * scale)
+        .setDisplaySize(imageWidth, this.questionImageHeight)
+        .setMask(this.questionImageMask!)
         .setVisible(true);
+      this.positionQuestionImage();
+      this.questionScrollHint?.setVisible(
+        this.questionImageHeight > this.questionImageViewport.height
+      );
     };
 
     if (this.textures.exists(textureKey)) {
@@ -107,6 +159,7 @@ export class BattleScene extends Phaser.Scene {
   playerHpText!: Phaser.GameObjects.Text;
   monsterHpText!: Phaser.GameObjects.Text;
   questionText!: Phaser.GameObjects.Text;
+  answerFeedback!: Phaser.GameObjects.Text;
 
   constructor() {
     super("BattleScene");
@@ -135,6 +188,8 @@ export class BattleScene extends Phaser.Scene {
     );
 
     this.questionImage?.setVisible(false);
+    this.questionScrollHint?.setVisible(false);
+    this.questionImageScrollOffset = 0;
     this.showQuestionImage();
   }
 
@@ -146,6 +201,59 @@ export class BattleScene extends Phaser.Scene {
 
     this.cameras.main.setBackgroundColor(
       "#111111"
+    );
+
+    this.questionImageViewport = {
+      x: 40,
+      y: 250,
+      width: this.scale.width - 80,
+      height: this.scale.height - 290
+    };
+
+    this.questionImageMaskSource?.destroy();
+    this.questionImageMaskSource = this.make.graphics({ x: 0, y: 0 });
+    this.questionImageMaskSource.fillStyle(0xffffff);
+    this.questionImageMaskSource.fillRect(
+      this.questionImageViewport.x,
+      this.questionImageViewport.y,
+      this.questionImageViewport.width,
+      this.questionImageViewport.height
+    );
+    this.questionImageMask = this.questionImageMaskSource.createGeometryMask();
+
+    this.questionScrollHint = this.add.text(
+      this.scale.width / 2,
+      this.scale.height - 24,
+      "Scroll over the image to view more",
+      {
+        fontSize: "16px",
+        color: "#ffffff",
+        backgroundColor: "#111111",
+        padding: { x: 8, y: 4 }
+      }
+    ).setOrigin(0.5).setVisible(false);
+
+    this.input.on(
+      Phaser.Input.Events.POINTER_WHEEL,
+      this.handleQuestionWheel,
+      this
+    );
+
+    this.events.once(
+      Phaser.Scenes.Events.SHUTDOWN,
+      () => {
+        this.input.off(
+          Phaser.Input.Events.POINTER_WHEEL,
+          this.handleQuestionWheel,
+          this
+        );
+        this.questionImageMask?.destroy();
+        this.questionImageMaskSource?.destroy();
+        this.questionImageMask = undefined;
+        this.questionImageMaskSource = undefined;
+        this.questionImage = undefined;
+        this.questionScrollHint = undefined;
+      }
     );
 
     this.monster = data.monster;
@@ -228,12 +336,22 @@ export class BattleScene extends Phaser.Scene {
 
     this.loadNewQuestion();
 
+    this.answerFeedback = this.add.text(
+      this.scale.width / 2,
+      215,
+      "",
+      {
+        fontSize: "20px",
+        color: "#ff6666"
+      }
+    ).setOrigin(0.5);
+
     //
     // DOM Form
     //
     const form = this.add.dom(
       this.scale.width / 2,
-      this.scale.height * 0.65
+      170
     ).createFromHTML(`
       <div
         style="
@@ -316,13 +434,13 @@ export class BattleScene extends Phaser.Scene {
         //
         // Correct answer
         //
-        this.monsterHp -= 10;
-
-        if (
-          this.monsterHp < 0
-        ) {
-          this.monsterHp = 0;
-        }
+        const damage = Math.min(10, this.monsterHp);
+        this.monsterHp -= damage;
+        this.answerFeedback
+          .setColor("#66ff66")
+          .setText(
+            `Correct! Monster life has been reduced by ${damage} HP.`
+          );
 
         this.monsterHpText.setText(
           `Monster HP: ${this.monsterHp}`
@@ -343,20 +461,79 @@ export class BattleScene extends Phaser.Scene {
             this.playerHp
           );
 
-          alert(
-            `Captured ${this.monster.name}!\n\n${this.monster.lore}`
-          );
-
           cleanup();
+          const captureMessage = this.add.dom(
+            this.scale.width / 2,
+            this.scale.height / 2
+          ).createFromHTML(`
+            <div style="
+              width: 440px;
+              padding: 24px;
+              box-sizing: border-box;
+              display: flex;
+              flex-direction: column;
+              align-items: center;
+              gap: 16px;
+              color: white;
+              background: #222;
+              border: 3px solid #66ff66;
+              border-radius: 12px;
+              text-align: center;
+              font-family: sans-serif;
+            ">
+              <h2 style="margin: 0;">Captured!</h2>
+              <img
+                data-monster-image
+                alt=""
+                style="width: 180px; height: 180px; object-fit: contain;"
+              />
+              <strong data-monster-name style="font-size: 22px;"></strong>
+              <p data-monster-lore style="margin: 0;"></p>
+              <button style="font-size: 18px; padding: 8px 20px;">
+                Continue
+              </button>
+            </div>
+          `);
 
-          this.scene.start(
-            "WorldScene",
-            {
-              playerX:
-                this.returnX,
-              playerY:
-                this.returnY
+          (captureMessage.node.querySelector(
+            "[data-monster-image]"
+          ) as HTMLImageElement).src = this.monster.image;
+          captureMessage.node.querySelector(
+            "[data-monster-name]"
+          )!.textContent = this.monster.name;
+          captureMessage.node.querySelector(
+            "[data-monster-lore]"
+          )!.textContent = this.monster.lore;
+          const closeCaptureMessage = () => {
+            window.removeEventListener(
+              "keydown",
+              handleCaptureMessageKeydown
+            );
+            captureMessage.destroy();
+            this.scene.start(
+              "WorldScene",
+              {
+                playerX: this.returnX,
+                playerY: this.returnY
+              }
+            );
+          };
+          const handleCaptureMessageKeydown = (event: KeyboardEvent) => {
+            if (event.key === "Enter") {
+              event.preventDefault();
+              closeCaptureMessage();
             }
+          };
+          window.setTimeout(
+            () => window.addEventListener(
+              "keydown",
+              handleCaptureMessageKeydown
+            ),
+            0
+          );
+          captureMessage.node.querySelector("button")!.addEventListener(
+            "click",
+            closeCaptureMessage
           );
 
           return;
@@ -365,6 +542,11 @@ export class BattleScene extends Phaser.Scene {
         this.loadNewQuestion();
 
       } else {
+
+        this.answerFeedback.setColor("#ff6666");
+        this.answerFeedback.setText(
+          "Wrong answer! You lost 10 HP."
+        );
 
         //
         // Wrong answer

@@ -446,6 +446,34 @@ export class WorldScene extends Phaser.Scene {
         fontSize: "16px"
       }
     ).setScrollFactor(0);
+
+    this.add.text(
+      this.scale.width - 20,
+      20,
+      "Reset Progress",
+      {
+        color: "#ffffff",
+        backgroundColor: "#8b2222",
+        fontSize: "18px",
+        padding: { x: 12, y: 8 }
+      }
+    )
+      .setOrigin(1, 0)
+      .setScrollFactor(0)
+      .setInteractive({ useHandCursor: true })
+      .on("pointerdown", () => {
+        const confirmed = window.confirm(
+          "Reset HP to 100 and release all captured monsters?"
+        );
+
+        if (!confirmed) {
+          return;
+        }
+
+        SaveSystem.resetCapturedMonsters();
+        SaveSystem.setPlayerHp(100);
+        this.hpText.setText("HP: 100");
+      });
   }
 
   update() {

@@ -1,18 +1,19 @@
 [
   {
     "id": 1,
-    "type": "text",
+    "type": "image",
     "subject": "math",
-    "question": "What is 7 x 8?",
-    "answers": ["56","a"]
+    "question": "",
+    "image": "assets/questions/math/p1/2022-P1-Maths-Check point 6-Catholic High/Q18.png",
+    "answers": ["85","$85"]
   },
-
   {
     "id": 2,
-    "type": "text",
-    "subject": "science",
-    "question": "Answer is a",
-    "answers": ["mars","a"]
+    "type": "image",
+    "subject": "math",
+    "question": "",
+    "image": "assets/questions/math/p1/2022-P1-Maths-Check point 6-Catholic High/Q19.png",
+    "answers": ["24"]
   },
   {
     "id": 3,
@@ -165,21 +166,5 @@
     "question": "",
     "image": "assets/questions/math/p1/2022-P1-Maths-Check point 6-Catholic High/Q17.png",
     "answers": ["75","$75"]
-  },
-  {
-    "id": 22,
-    "type": "image",
-    "subject": "math",
-    "question": "",
-    "image": "assets/questions/math/p1/2022-P1-Maths-Check point 6-Catholic High/Q18.png",
-    "answers": ["75","$75"]
-  },
-  {
-    "id": 23,
-    "type": "image",
-    "subject": "math",
-    "question": "",
-    "image": "assets/questions/math/p1/2022-P1-Maths-Check point 6-Catholic High/Q19.png",
-    "answers": ["24"]
   }
 ]

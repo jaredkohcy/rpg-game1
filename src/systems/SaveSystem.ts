@@ -127,6 +127,13 @@ export class SaveSystem {
     }
   }
 
+  static resetCapturedMonsters(): void {
+
+    const data = this.load();
+    data.capturedMonsters = [];
+    this.save(data);
+  }
+
   static hasSeenMonster(
     monsterId: number
   ): boolean {
