@@ -22,6 +22,44 @@ export class BattleScene extends Phaser.Scene {
         this.load.image(textureKey, this.monster.image);
         this.load.start();
     }
+    showQuestionImage() {
+        const question = this.currentQuestion;
+        if (!question?.image) {
+            return;
+        }
+        const textureKey = `question-${question.id}`;
+        const addQuestionImage = () => {
+            if (this.currentQuestion.id !== question.id) {
+                return;
+            }
+            const source = this.textures.get(textureKey).getSourceImage();
+            const maxWidth = this.scale.width - 80;
+            const maxHeight = 320;
+            const scale = Math.min(maxWidth / source.width, maxHeight / source.height);
+            if (!this.questionImage) {
+                this.questionImage = this.add.image(this.scale.width / 2, 420, textureKey);
+            }
+            else {
+                this.questionImage.setTexture(textureKey);
+            }
+            this.questionImage
+                .setPosition(this.scale.width / 2, 420)
+                .setDisplaySize(source.width * scale, source.height * scale)
+                .setVisible(true);
+        };
+        if (this.textures.exists(textureKey)) {
+            addQuestionImage();
+            return;
+        }
+        this.load.once(`filecomplete-image-${textureKey}`, addQuestionImage);
+        this.load.once(Phaser.Loader.Events.FILE_LOAD_ERROR, (file) => {
+            if (file.key === textureKey) {
+                console.error(`Failed to load question image: ${question.image}`);
+            }
+        });
+        this.load.image(textureKey, question.image);
+        this.load.start();
+    }
     constructor() {
         super("BattleScene");
         this.monsterHp = 0;
@@ -40,6 +78,8 @@ export class BattleScene extends Phaser.Scene {
         this.currentQuestion =
             nextQuestion;
         this.questionText.setText(this.currentQuestion.question);
+        this.questionImage?.setVisible(false);
+        this.showQuestionImage();
     }
     create(data) {
         this.cameras.main.setBackgroundColor("#111111");

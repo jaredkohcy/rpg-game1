@@ -13,6 +13,8 @@ export class BattleScene extends Phaser.Scene {
 
   private playerHp = 100;
 
+  private questionImage?: Phaser.GameObjects.Image;
+
   private showMonsterImage() {
     const textureKey = `monster-${this.monster.id}`;
     const addMonsterImage = () => {
@@ -43,6 +45,60 @@ export class BattleScene extends Phaser.Scene {
       }
     );
     this.load.image(textureKey, this.monster.image);
+    this.load.start();
+  }
+
+  private showQuestionImage() {
+    const question = this.currentQuestion;
+    if (!question?.image) {
+      return;
+    }
+
+    const textureKey = `question-${question.id}`;
+    const addQuestionImage = () => {
+      if (this.currentQuestion.id !== question.id) {
+        return;
+      }
+
+      const source = this.textures.get(textureKey).getSourceImage();
+      const maxWidth = this.scale.width - 80;
+      const maxHeight = 320;
+      const scale = Math.min(
+        maxWidth / source.width,
+        maxHeight / source.height
+      );
+
+      if (!this.questionImage) {
+        this.questionImage = this.add.image(
+          this.scale.width / 2,
+          420,
+          textureKey
+        );
+      } else {
+        this.questionImage.setTexture(textureKey);
+      }
+
+      this.questionImage
+        .setPosition(this.scale.width / 2, 420)
+        .setDisplaySize(source.width * scale, source.height * scale)
+        .setVisible(true);
+    };
+
+    if (this.textures.exists(textureKey)) {
+      addQuestionImage();
+      return;
+    }
+
+    this.load.once(`filecomplete-image-${textureKey}`, addQuestionImage);
+    this.load.once(
+      Phaser.Loader.Events.FILE_LOAD_ERROR,
+      (file: Phaser.Loader.File) => {
+        if (file.key === textureKey) {
+          console.error(`Failed to load question image: ${question.image}`);
+        }
+      }
+    );
+    this.load.image(textureKey, question.image);
     this.load.start();
   }
 
@@ -77,6 +133,9 @@ export class BattleScene extends Phaser.Scene {
     this.questionText.setText(
       this.currentQuestion.question
     );
+
+    this.questionImage?.setVisible(false);
+    this.showQuestionImage();
   }
 
   create(data: {
